@@ -1,43 +1,37 @@
 import pandas as pd
 import numpy as np
-import os
-import joblib
-
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 
 # =========================
-# 1. CHARGEMENT DATASET
+# CHARGEMENT DATASET
 # =========================
-df = pd.read_csv("../data/patients_dakar.csv")
 
-df.columns = df.columns.str.strip()
+df = pd.read_csv("data/patients_dakar.csv")
 
 print(f"Dataset : {df.shape[0]} patients, {df.shape[1]} colonnes")
 print(f"\nColonnes : {list(df.columns)}")
 print(f"\nDiagnostics :\n{df['diagnostic'].value_counts()}")
 
+# =========================
+# ENCODAGE
+# =========================
 
-# =========================
-# 2. ENCODAGE
-# =========================
+from sklearn.preprocessing import LabelEncoder
+
 le_sexe = LabelEncoder()
 le_region = LabelEncoder()
 
 df['sexe_encoded'] = le_sexe.fit_transform(df['sexe'])
 df['region_encoded'] = le_region.fit_transform(df['region'])
 
-
-# Features et cible
 feature_cols = [
-    'age', 'sexe_encoded', 'temperature', 'tension_sys',
-    'toux', 'fatigue', 'maux_tete', 'region_encoded'
+    'age',
+    'sexe_encoded',
+    'temperature',
+    'tension_sys',
+    'toux',
+    'fatigue',
+    'maux_tete',
+    'region_encoded'
 ]
 
 X = df[feature_cols]
@@ -46,12 +40,15 @@ y = df['diagnostic']
 print(f"Features : {X.shape}")
 print(f"Cible : {y.shape}")
 
+# =========================
+# SPLIT
+# =========================
 
-# =========================
-# 3. SPLIT
-# =========================
+from sklearn.model_selection import train_test_split
+
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
+    X,
+    y,
     test_size=0.2,
     random_state=42,
     stratify=y
@@ -60,10 +57,12 @@ X_train, X_test, y_train, y_test = train_test_split(
 print(f"Entrainement : {X_train.shape[0]} patients")
 print(f"Test : {X_test.shape[0]} patients")
 
+# =========================
+# MODELE
+# =========================
 
-# =========================
-# 4. MODELE
-# =========================
+from sklearn.ensemble import RandomForestClassifier
+
 model = RandomForestClassifier(
     n_estimators=100,
     random_state=42
@@ -71,43 +70,50 @@ model = RandomForestClassifier(
 
 model.fit(X_train, y_train)
 
-print("\nModèle entraîné !")
+print("Modele entraine !")
 print(f"Nombre d'arbres : {model.n_estimators}")
 print(f"Nombre de features : {model.n_features_in_}")
 print(f"Classes : {list(model.classes_)}")
 
+# =========================
+# PREDICTIONS
+# =========================
 
-# =========================
-# 5. PREDICTION
-# =========================
 y_pred = model.predict(X_test)
 
 comparison = pd.DataFrame({
-    "Vrai diagnostic": y_test.values[:10],
-    "Prediction": y_pred[:10]
+    'Vrai diagnostic': y_test.values[:10],
+    'Prediction': y_pred[:10]
 })
 
-print("\nComparaison :")
 print(comparison)
 
+# =========================
+# METRIQUES
+# =========================
 
-# =========================
-# 6. METRIQUES
-# =========================
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
 accuracy = accuracy_score(y_test, y_pred)
-print(f"\nAccuracy : {accuracy:.2%}")
+print(f"Accuracy : {accuracy:.2%}")
+
+print("\nMatrice de confusion :")
+cm = confusion_matrix(y_test, y_pred, labels=model.classes_)
+print(cm)
 
 print("\nRapport de classification :")
 print(classification_report(y_test, y_pred))
 
-
 # =========================
-# 7. MATRICE DE CONFUSION
+# VISUALISATION
 # =========================
-cm = confusion_matrix(y_test, y_pred, labels=model.classes_)
 
-print("\nMatrice de confusion :")
-print(cm)
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+import joblib
+
+os.makedirs("figures", exist_ok=True)
 
 plt.figure(figsize=(8, 6))
 
@@ -120,73 +126,44 @@ sns.heatmap(
     yticklabels=model.classes_
 )
 
-plt.xlabel("Prediction du modele")
-plt.ylabel("Vrai diagnostic")
-plt.title("Matrice de confusion - SenSante")
+plt.xlabel('Prediction du modele')
+plt.ylabel('Vrai diagnostic')
+plt.title('Matrice de confusion - SenSante')
 
 plt.tight_layout()
-
-# créer dossier figures si besoin
-os.makedirs("figures", exist_ok=True)
-
-plt.savefig("figures/confusion_matrix.png", dpi=150)
+plt.savefig('figures/confusion_matrix.png', dpi=150)
 plt.show()
 
-print("Figure sauvegardée dans figures/confusion_matrix.png")
-
+print("Figure sauvegardee dans figures/confusion_matrix.png")
 
 # =========================
-# 8. SAUVEGARDE MODELE
+# SAUVEGARDE ← CORRIGÉ
 # =========================
+
 os.makedirs("models", exist_ok=True)
 
 joblib.dump(model, "models/model.pkl")
-joblib.dump(le_sexe, "models/le_sexe.pkl")
-joblib.dump(le_region, "models/le_region.pkl")
-
-size = os.path.getsize("models/model.pkl")
-
-print("\nModele sauvegardé : models/model.pkl")
-print(f"Taille : {size / 1024:.1f} Ko")
-
-
-
-from sklearn.model_selection import train_test_split
-
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X,y,
-    test_size=0.2,      
-    random_state=42,    
-    stratify=y          
-)
-
-print(f"Entraînement : {X_train.shape[0]} patients")
-print(f"Test : {X_test.shape[0]} patients")
-
-# Sauvegarder les encodeurs (indispensables pour les nouvelles données)
-joblib.dump(le_sexe, "models/encoder_sexe.pkl")
-joblib.dump(le_region, "models/encoder_region.pkl")
-
-# Sauvegarder la liste des features (pour référence)
+joblib.dump(le_sexe, "models/le_sexe.pkl")        # ← corrigé
+joblib.dump(le_region, "models/le_region.pkl")    # ← corrigé
 joblib.dump(feature_cols, "models/feature_cols.pkl")
 
-print("Encodeurs et metadata sauvegardés.")
+print("Modele + encodeurs sauvegardes")
 
-# Simuler ce que fera l'API en Lab 3 :
-# Charger le modèle DEPUIS LE FICHIER (pas depuis la mémoire)
+# =========================
+# RECHARGEMENT ← CORRIGÉ
+# =========================
 
 model_loaded = joblib.load("models/model.pkl")
-le_sexe_loaded = joblib.load("models/encoder_sexe.pkl")
-le_region_loaded = joblib.load("models/encoder_region.pkl")
+le_sexe_loaded = joblib.load("models/le_sexe.pkl")      # ← corrigé
+le_region_loaded = joblib.load("models/le_region.pkl")  # ← corrigé
 
-print(f"Modèle rechargé : {type(model_loaded).__name__}")
+print(f"Modele recharge : {type(model_loaded).__name__}")
 print(f"Classes : {list(model_loaded.classes_)}")
 
+# =========================
+# TEST NOUVEAU PATIENT
+# =========================
 
-
-
-# Un nouveau patient arrive au centre de santé de Médina
 nouveau_patient = {
     'age': 28,
     'sexe': 'F',
@@ -198,11 +175,9 @@ nouveau_patient = {
     'region': 'Dakar'
 }
 
-# Encoder les valeurs catégoriques
 sexe_enc = le_sexe_loaded.transform([nouveau_patient['sexe']])[0]
 region_enc = le_region_loaded.transform([nouveau_patient['region']])[0]
 
-# Préparer le vecteur de features
 features = [
     nouveau_patient['age'],
     sexe_enc,
@@ -214,19 +189,38 @@ features = [
     region_enc
 ]
 
-# Prédire
 diagnostic = model_loaded.predict([features])[0]
 probas = model_loaded.predict_proba([features])[0]
 proba_max = probas.max()
 
-print("\n--- Résultat du pré-diagnostic ---")
+print("\n--- Resultat ---")
 print(f"Patient : {nouveau_patient['sexe']}, {nouveau_patient['age']} ans")
 print(f"Diagnostic : {diagnostic}")
-print(f"Probabilité : {proba_max:.1%}")
+print(f"Probabilite : {proba_max:.1%}")
 
-print("\nProbabilités par classe :")
-for classe, proba in zip(model_loaded.classes_, probas):
-    bar = '#' * int(proba * 30)
-    print(f"{classe:8s} : {proba:.1%} {bar}")
+# =========================
+# IMPORTANCES
+# =========================
 
+importances = model.feature_importances_
 
+for name, imp in sorted(
+    zip(feature_cols, importances),
+    key=lambda x: x[1],
+    reverse=True
+):
+    print(f"{name:20s} : {imp:.3f}")
+
+# =========================
+# TEST MULTI-PATIENTS
+# =========================
+
+p1 = pd.DataFrame([[18, 1, 36.5, 120, 0, 0, 0, 0]], columns=feature_cols)
+p2 = pd.DataFrame([[35, 0, 39.8, 130, 1, 1, 1, 1]], columns=feature_cols)
+p3 = pd.DataFrame([[70, 1, 38.2, 140, 1, 0, 0, 1]], columns=feature_cols)
+
+patients = [p1, p2, p3]
+
+for i, patient in enumerate(patients, 1):
+    prediction = model_loaded.predict(patient)[0]
+    print(f"Patient {i} → Diagnostic : {prediction}")
