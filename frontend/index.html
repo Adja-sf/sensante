@@ -49,6 +49,19 @@
                     Symptomes du patient
                 </h2>
 
+                <!-- Nom -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Nom du patient
+                </label>
+
+            <input
+             type="text"
+             id="nom"
+             class="w-full border border-gray-300 rounded-lg p-2"
+                 placeholder="Ex: Awa Diallo"  >
+            </div>
+
                 <!-- Age -->
                 <div class="mb-3">
 
@@ -249,11 +262,13 @@
 
         // URL de l'API (a changer si l'API est ailleurs)
         const API_URL = "http://localhost:8000";
+        const historique = [];
 
         async function diagnostiquer() {
 
             // 1. Recuperer les valeurs du formulaire
             const patient = {
+                nom: document.getElementById("nom").value,
 
                 age: parseInt(
                     document.getElementById("age").value
@@ -397,8 +412,41 @@
                 r.probabilite * 100
             );
 
+            const icones = {
+                  palu: "🌡️",
+                 grippe: "❄️",
+                  typh: "🦠",
+                  sain: "✅"
+            };
+
+            const icone = icones[r.diagnostic] || "🩺";
+
             const section =
                 document.getElementById("result-section");
+
+                historique.unshift({
+                     nom: document.getElementById("nom").value,
+                     diagnostic: r.diagnostic,
+                     probabilite: Math.round(r.probabilite * 100)
+                });
+
+                if (historique.length > 5) {
+                      historique.pop();
+                    }
+
+
+                    let lignesHistorique = "";
+
+                    historique.forEach(h => {
+                    lignesHistorique += `
+                    <tr class="border-b">
+                    <td class="p-2">${h.nom}</td>
+                    <td class="p-2">${h.diagnostic}</td>
+                    <td class="p-2">${h.probabilite}%</td>
+                     </tr>
+                     `;
+                    });
+
 
             section.innerHTML = `
                 <div class="bg-white rounded-xl shadow-md p-6">
@@ -413,9 +461,14 @@
                             Diagnostic :
                         </p>
 
-                        <p class="text-2xl font-bold ${c.text} uppercase mt-1">
-                            ${r.diagnostic}
-                        </p>
+                      
+                    <p class="text-2xl font-bold ${c.text} uppercase mt-1 flex items-center gap-2">
+
+                         <span>${icone}</span>
+
+                         <span>${r.diagnostic}</span>
+
+                    </p>
 
                     </div>
 
@@ -466,9 +519,118 @@
 
                     </div>
 
+
+                    <div class="mt-6">
+                    <h3 class="text-lg font-bold mb-2">
+                          Historique des consultations
+                     </h3>
+
+                     <table class="w-full border border-gray-200 text-sm">
+                     <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-2 text-left">Nom</th>
+                        <th class="p-2 text-left">Diagnostic</th>
+                        <th class="p-2 text-left">Probabilité</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                 ${lignesHistorique}
+                </tbody>
+                </table>
+                </div>
+                
+                </div>
+            `;
+            demanderExplication(r);
+        }
+
+        async function demanderExplication(diagnostic_data) {
+    // Récupérer les données du formulaire
+    const explainData = {
+        diagnostic: diagnostic_data.diagnostic,
+        probabilite: diagnostic_data.probabilite,
+
+        age: parseInt(
+            document.getElementById("age").value
+        ),
+
+        sexe: document.getElementById("sexe").value,
+
+        temperature: parseFloat(
+            document
+                .getElementById("temperature")
+                .value
+        ),
+
+        region: document.getElementById("region").value
+    };
+
+    // Zone d'explication dans le result-section
+    const section =
+        document.getElementById("result-section");
+
+    // Ajouter un placeholder
+    const explDiv = document.createElement("div");
+
+    explDiv.id = "explication-zone";
+
+    explDiv.innerHTML = `
+        <div class="mt-4 bg-purple-50 rounded-lg p-4 border border-purple-200">
+            <p class="text-sm text-purple-600 font-medium mb-2">
+                Explication (Llama 3)
+            </p>
+
+            <p class="text-gray-500 text-sm animate-pulse">
+                Génération en cours...
+            </p>
+        </div>
+    `;
+
+    section
+        .querySelector(".bg-white")
+        .appendChild(explDiv);
+
+    try {
+        const response = await fetch(
+            API_URL + "/explain",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(explainData)
+            }
+        );
+
+        if (response.ok) {
+            const result = await response.json();
+
+            explDiv.innerHTML = `
+                <div class="mt-4 bg-purple-50 rounded-lg p-4 border border-purple-200">
+                    <p class="text-sm text-purple-600 font-medium mb-2">
+                        Explication (Llama 3)
+                    </p>
+
+                    <p class="text-gray-700 text-sm leading-relaxed">
+                        ${result.explication}
+                    </p>
                 </div>
             `;
         }
+
+    } catch (error) {
+        explDiv.innerHTML = `
+            <div class="mt-4 bg-gray-50 rounded-lg p-3">
+                <p class="text-gray-400 text-sm">
+                    Explication non disponible.
+                </p>
+            </div>
+        `;
+    }
+}
 
         function afficherErreur(msg) {
 
