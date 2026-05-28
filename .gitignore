@@ -1,13 +1,8 @@
-# .gitignore - Fichiers à ne PAS versionner
-
 # Environnement Python
 __pycache__/
 *.pyc
 venv/
 .env
-
-# Modèle ML (trop gros pour GitHub)
-models/*.pkl
 
 # Fichiers OS
 .DS_Store
@@ -19,4 +14,4 @@ Thumbs.db
 
 # Fichiers temporaires matplotlib
 *.png
-!figures/*.pngmodels/model.pkl
+!figures/*.png
