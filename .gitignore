@@ -19,4 +19,4 @@ Thumbs.db
 
 # Fichiers temporaires matplotlib
 *.png
-!figures/*.png
+!figures/*.pngmodels/model.pkl
