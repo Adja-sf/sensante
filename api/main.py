@@ -265,7 +265,7 @@ def explain(data: ExplainInput):
             max_tokens=200,
             temperature=0.3
         )
-
+  
         explication = response.choices[0].message.content
 
     except Exception as e:
