@@ -16,4 +16,3 @@ Thumbs.db
 *.png
 !figures/*.png
 
-models/*.pkl
